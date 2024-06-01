@@ -65,7 +65,7 @@ func (b *TelegramBot) StartBot(client gptClient.GptClient) {
 		}
 		gptResponse, err := client.SendMessage(text)
 		retries := b.retries
-		for gptResponse.ResponseBody == "" && retries > 0 {
+		for gptResponse == "" && retries > 0 {
 			log.Logger.Debugf("retry to send request to ChatGPT [%d]", b.retries-retries)
 			gptResponse, err = client.SendMessage(text)
 			if err != nil {
@@ -73,7 +73,7 @@ func (b *TelegramBot) StartBot(client gptClient.GptClient) {
 			}
 			retries--
 		}
-		msg := tgbotapi.NewMessage(chatID, gptResponse.ResponseBody)
+		msg := tgbotapi.NewMessage(chatID, gptResponse)
 		_, err = b.BotInstance.Send(msg)
 		if err != nil {
 			log.Logger.Debugf("Failed to send response to [%s][%d]", update.Message.From.UserName, userID)
