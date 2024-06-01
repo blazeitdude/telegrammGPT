@@ -12,7 +12,7 @@ import (
 type GptConfiguration struct {
 	ApiURL    string `yaml:"ApiURL"`
 	ApiKey    string `yaml:"ApiKey"`
-	model     string `yaml:"model"`
+	Model     string `yaml:"model"`
 	MaxTokens string `yaml:"max_Tokens"`
 }
 
@@ -37,7 +37,7 @@ func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 	var response GptResponse
 
 	requestBody, err := json.Marshal(map[string]interface{}{
-		"model":      c.conf.model,
+		"model":      c.conf.Model,
 		"prompt":     message,
 		"max_tokens": c.conf.MaxTokens,
 	})
