@@ -36,7 +36,7 @@ func InitGpt(configuration GptConfiguration) GptClient {
 func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 	logger := botLogger.GetLogger()
 	var response GptResponse
-	messagesArray := []map[string]string
+	var messagesArray = []map[string]string{}
 	messagesArray = append(messagesArray, map[string]string{})
 	messagesArray[0]["role"] = "user"
 	messagesArray = append(messagesArray, map[string]string{})
