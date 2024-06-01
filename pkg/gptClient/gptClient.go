@@ -36,12 +36,16 @@ func InitGpt(configuration GptConfiguration) GptClient {
 func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 	logger := botLogger.GetLogger()
 	var response GptResponse
+	messages := map[string]string{
+		"role":     "user",
+		"countent": message,
+	}
 
 	requestBody, err := json.Marshal(map[string]interface{}{
-		"model":      c.conf.Model,
-		"prompt":     message,
-		"max_tokens": c.conf.MaxTokens,
-		"messages":   message,
+		"model":       c.conf.Model,
+		"temperature": 0.7,
+		"max_tokens":  c.conf.MaxTokens,
+		"messages":    messages,
 	})
 
 	if err != nil {
