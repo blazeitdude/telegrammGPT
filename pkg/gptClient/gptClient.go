@@ -41,6 +41,7 @@ func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 		"model":      c.conf.Model,
 		"prompt":     message,
 		"max_tokens": c.conf.MaxTokens,
+		"messeges":   message,
 	})
 
 	if err != nil {
