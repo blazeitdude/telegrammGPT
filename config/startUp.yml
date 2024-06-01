@@ -3,7 +3,7 @@ botConfig:
   retries: 3
 gptConfig:
   apiURL: https://api.openai.com/v1/chat/completions
-  model: text-davinci-002
+  model: text-davinci-003
   maxTokens: 60
 loggerConfig:
   logLevel: DEBUG
