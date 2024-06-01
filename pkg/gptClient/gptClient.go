@@ -17,7 +17,8 @@ type GptConfiguration struct {
 }
 
 type GptResponse struct {
-	ResponseBody string
+	ResponseHeader string
+	ResponseBody   string
 }
 
 type GptClient struct {
@@ -69,11 +70,12 @@ func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 		}
 	}(resp.Body)
 
-	readed, err := ioutil.ReadAll(resp.Body)
+	readedBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Logger.Debug("Failed to Read Response from GPT", err)
 		return GptResponse{}, err
 	}
-	response.ResponseBody = string(readed)
+	logger.Logger.Debugf("header from response: %v", resp.Header)
+	response.ResponseBody = string(readedBody)
 	return response, nil
 }
