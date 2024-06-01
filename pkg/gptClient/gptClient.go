@@ -3,6 +3,7 @@ package gptClient
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,17 @@ type GptClient struct {
 	conf   GptConfiguration
 }
 
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type RequestBody struct {
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Temperature float64   `json:"temperature"`
+}
+
 func InitGpt(configuration GptConfiguration) GptClient {
 	var gptClient GptClient
 	gptClient.conf = configuration
@@ -36,25 +48,32 @@ func InitGpt(configuration GptConfiguration) GptClient {
 func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 	logger := botLogger.GetLogger()
 	var response GptResponse
-	var messagesArray = []map[string]string{}
-	messagesArray = append(messagesArray, map[string]string{})
-	messagesArray[0]["role"] = "user"
-	messagesArray = append(messagesArray, map[string]string{})
-	messagesArray[1]["content"] = message
+	messages := []Message{
+		{
+			Role:    "user",
+			Content: "Say this is a test!",
+		},
+	}
 
-	requestBody, err := json.Marshal(map[string]interface{}{
-		"model":       c.conf.Model,
-		"temperature": 0.7,
-		"max_tokens":  c.conf.MaxTokens,
-		"messages":    messagesArray,
-	})
+	requestBody := RequestBody{
+		Model:       "gpt-3.5-turbo",
+		Messages:    messages,
+		Temperature: 0.7,
+	}
+
+	// Преобразуем тело запроса в JSON
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return GptResponse{}, nil
+	}
 
 	if err != nil {
 		logger.Logger.Debug("Failed to Marshal Request to ChatGPT")
 		return GptResponse{}, nil
 	}
 
-	req, err := http.NewRequest("POST", c.conf.ApiURL, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", c.conf.ApiURL, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		logger.Logger.Debug("Failed to configure request to Gpt:", err)
 		return GptResponse{}, nil
