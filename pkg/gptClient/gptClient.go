@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"telegrammGPT/pkg/botLogger"
@@ -17,9 +16,14 @@ type GptConfiguration struct {
 	MaxTokens string `yaml:"max_Tokens"`
 }
 
-type GptResponse struct {
-	ResponseHeader string
-	ResponseBody   string
+type Choice struct {
+	Message Message `json:"message"`
+}
+
+type ResponseBody struct {
+	Choices []struct {
+		Text string `json:"text"`
+	} `json:"choices"`
 }
 
 type GptClient struct {
@@ -45,18 +49,17 @@ func InitGpt(configuration GptConfiguration) GptClient {
 	return gptClient
 }
 
-func (c *GptClient) SendMessage(message string) (GptResponse, error) {
+func (c *GptClient) SendMessage(message string) (string, error) {
 	logger := botLogger.GetLogger()
-	var response GptResponse
 	messages := []Message{
 		{
 			Role:    "user",
-			Content: "Say this is a test!",
+			Content: message,
 		},
 	}
 
 	requestBody := RequestBody{
-		Model:       "gpt-3.5-turbo",
+		Model:       c.conf.Model,
 		Messages:    messages,
 		Temperature: 0.7,
 	}
@@ -65,42 +68,50 @@ func (c *GptClient) SendMessage(message string) (GptResponse, error) {
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
 		fmt.Println("Error marshalling JSON:", err)
-		return GptResponse{}, nil
+		return "", nil
 	}
 
 	if err != nil {
 		logger.Logger.Debug("Failed to Marshal Request to ChatGPT")
-		return GptResponse{}, nil
+		return "", nil
 	}
 
 	req, err := http.NewRequest("POST", c.conf.ApiURL, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		logger.Logger.Debug("Failed to configure request to Gpt:", err)
-		return GptResponse{}, nil
+		return "", nil
 	}
 	req.Header.Set("Authorization", "Bearer "+c.conf.ApiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		logger.Logger.Debug("Failed to send Message to GPT", err)
-		return GptResponse{}, err
+		fmt.Println("Error making request:", err)
+		return "", nil
 	}
+	defer resp.Body.Close()
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			logger.Logger.Debug("Failed to close response body ReaderCloser??", err)
-			return
-		}
-	}(resp.Body)
-
-	readedBody, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.Logger.Debug("Failed to Read Response from GPT", err)
-		return GptResponse{}, err
+		fmt.Println("Error reading response body:", err)
+		return "", nil
 	}
-	logger.Logger.Debugf("header from response: %v", resp.Header)
-	response.ResponseBody = string(readedBody)
-	return response, nil
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Non-200 response: %s\n", body)
+		return "", nil
+	}
+
+	var responseBody ResponseBody
+	err = json.Unmarshal(body, &responseBody)
+	if err != nil {
+		fmt.Println("Error unmarshalling response body:", err)
+		return "", nil
+	}
+
+	fmt.Println("Response from OpenAI:")
+	for _, choice := range responseBody.Choices {
+		fmt.Println(choice.Text)
+	}
+	return responseBody.Choices[0].Text, nil
 }
