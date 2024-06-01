@@ -1,9 +1,10 @@
 package config
 
 import (
+	"errors"
 	"github.com/spf13/viper"
+	"log"
 	"os"
-	"path/filepath"
 	"telegrammGPT/pkg/botLogger"
 	"telegrammGPT/pkg/gptClient"
 	"telegrammGPT/pkg/telegramBot"
@@ -17,29 +18,37 @@ type Configuration struct {
 
 func ReadConfig() Configuration {
 	var conf Configuration
-	log := botLogger.GetLogger()
 	viper.SetConfigName("startUp")
 	viper.SetConfigType("yml")
-	viper.AddConfigPath(filepath.Join("config"))
+	viper.AddConfigPath("../../config")
 	if err := viper.ReadInConfig(); err != nil {
-		switch err.(type) {
-		case viper.ConfigParseError:
-			log.Logger.Fatal("Failed to parse config file")
-		case viper.ConfigFileNotFoundError:
-			log.Logger.Fatal("Config file not found")
-		case viper.ConfigMarshalError:
-			log.Logger.Fatal("Failed to marshall config file")
-		case viper.UnsupportedConfigError:
-			log.Logger.Fatal("This config file is unsupported")
+		var configParseError viper.ConfigParseError
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		var configMarshalError viper.ConfigMarshalError
+		var unsupportedConfigError viper.UnsupportedConfigError
+		switch {
+		case errors.As(err, &configParseError):
+			log.Fatal("Failed to parse config file")
+		case errors.As(err, &configFileNotFoundError):
+			log.Fatal("Config file not found")
+		case errors.As(err, &configMarshalError):
+			log.Fatal("Failed to marshall config file")
+		case errors.As(err, &unsupportedConfigError):
+			log.Fatal("This config file is unsupported")
 		default:
-			log.Logger.Fatal("unexpected error while reading the configuration file")
+			log.Fatal("unexpected error while reading the configuration file")
 		}
 	}
 	conf.BotConfig.ApiKey = os.Getenv("TELEGRAMM_APIKEY")
 	conf.GptConfig.ApiKey = os.Getenv("GPT_APIKEY")
 
+	if conf.BotConfig.ApiKey == "" || conf.GptConfig.ApiKey == "" {
+		log.Fatal("Fail;ed to read ENV")
+	}
+
 	if err := viper.Unmarshal(&conf); err != nil {
-		log.Logger.Fatalf("Failed to unmarshall config file")
+		log.Fatal("Failed to unmarshall config file")
+
 	}
 	return conf
 }
