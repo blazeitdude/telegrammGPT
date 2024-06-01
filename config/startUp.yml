@@ -3,7 +3,7 @@ botConfig:
   retries: 3
 gptConfig:
   apiURL: https://api.openai.com/v1/chat/completions
-  model: gpt-4-32k
+  model: gpt-3
   maxTokens: 60
 loggerConfig:
   logLevel: DEBUG
