@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"telegrammGPT/pkg/botLogger"
+	"telegrammGPT/pkg/historyCache"
 )
 
 type GptConfiguration struct {
@@ -16,17 +17,37 @@ type GptConfiguration struct {
 	MaxTokens string `yaml:"max_Tokens"`
 }
 
-type Choice struct {
-	Message Message `json:"message"`
+type GptResponse struct {
+	ID      string   `json:"id"`
+	Object  string   `json:"object"`
+	Created int64    `json:"created"`
+	Model   string   `json:"model"`
+	Choices []Choice `json:"choices"`
+	Usage   Usage    `json:"usage"`
 }
 
-type ResponseBody struct {
-	Choices []struct {
-		Text string `json:"text"`
-	} `json:"choices"`
+type Choice struct {
+	Text         string    `json:"text"`
+	Index        int       `json:"index"`
+	Logprobs     *Logprobs `json:"logprobs,omitempty"`
+	FinishReason string    `json:"finish_reason"`
+}
+
+type Logprobs struct {
+	Tokens        []string             `json:"tokens"`
+	TokenLogprobs []float64            `json:"token_logprobs"`
+	TopLogprobs   []map[string]float64 `json:"top_logprobs"`
+	TextOffset    []int                `json:"text_offset"`
+}
+
+type Usage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 type GptClient struct {
+	Cache  *historyCache.Cache
 	Client *http.Client
 	conf   GptConfiguration
 }
@@ -36,35 +57,37 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-type RequestBody struct {
-	Model       string    `json:"model"`
-	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature"`
+type GPTRequest struct {
+	Model     string    `json:"model"`
+	Messages  []Message `json:"messages"`
+	MaxTokens int       `json:"max_tokens"`
 }
 
 func InitGpt(configuration GptConfiguration) GptClient {
 	var gptClient GptClient
+	gptClient.Cache = historyCache.NewCache()
 	gptClient.conf = configuration
 	gptClient.Client = &http.Client{}
 	return gptClient
 }
 
-func (c *GptClient) SendMessage(message string) (string, error) {
+func (c *GptClient) SendMessage(content string, userID string) (string, error) {
 	logger := botLogger.GetLogger()
-	messages := []Message{
-		{
-			Role:    "user",
-			Content: message,
-		},
+	message := Message{
+		Role:    "user",
+		Content: content,
 	}
 
-	requestBody := RequestBody{
-		Model:       c.conf.Model,
-		Messages:    messages,
-		Temperature: 0.7,
+	userCache := c.Cache.GetUserCache(userID)
+
+	messagesWithHistory := append(userCache.Messages, message)
+
+	requestBody := GPTRequest{
+		Model:     c.conf.Model,
+		Messages:  messagesWithHistory,
+		MaxTokens: 150,
 	}
 
-	// Преобразуем тело запроса в JSON
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
 		fmt.Println("Error marshalling JSON:", err)
@@ -91,27 +114,28 @@ func (c *GptClient) SendMessage(message string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	byteResp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
 		return "", nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Non-200 response: %s\n", body)
+		logger.Logger.Debug("Non-200 response: %s\n", resp)
 		return "", nil
 	}
 
-	var responseBody ResponseBody
-	err = json.Unmarshal(body, &responseBody)
+	var gptResponse GptResponse
+	err = json.Unmarshal(byteResp, &gptResponse)
 	if err != nil {
 		fmt.Println("Error unmarshalling response body:", err)
 		return "", nil
 	}
 
 	fmt.Println("Response from OpenAI:")
-	for _, choice := range responseBody.Choices {
-		fmt.Println(choice.Text)
+	for _, choice := range gptResponse.Choices {
+		logger.Logger.Debug(choice.Text)
 	}
-	return responseBody.Choices[0].Text, nil
+
+	return gptResponse.Choices[0].Text, nil
 }

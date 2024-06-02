@@ -2,6 +2,7 @@ package telegramBot
 
 import (
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
+	"strconv"
 	"strings"
 	"telegrammGPT/pkg/botLogger"
 	"telegrammGPT/pkg/gptClient"
@@ -63,11 +64,11 @@ func (b *TelegramBot) StartBot(client gptClient.GptClient) {
 			b.handleCommand(com, chatID)
 			continue
 		}
-		gptResponse, err := client.SendMessage(text)
+		gptResponse, err := client.SendMessage(text, strconv.Itoa(userID))
 		retries := b.retries
 		for gptResponse == "" && retries > 0 {
 			log.Logger.Debugf("retry to send request to ChatGPT [%d]", b.retries-retries)
-			gptResponse, err = client.SendMessage(text)
+			gptResponse, err = client.SendMessage(text, strconv.Itoa(userID))
 			if err != nil {
 				log.Logger.Debugf("Failed to send request ot ChatGPT: ", err)
 			}
