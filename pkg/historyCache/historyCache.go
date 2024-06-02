@@ -2,30 +2,34 @@ package historyCache
 
 import (
 	"sync"
-	"telegrammGPT/pkg/gptClient"
 )
 
 type UserCache struct {
-	Messages []gptClient.Message
+	Messages []Message
 	mu       sync.RWMutex
+}
+
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 func NewUserCache() *UserCache {
 	return &UserCache{
-		Messages: make([]gptClient.Message, 0),
+		Messages: make([]Message, 0),
 	}
 }
 
-func (c *UserCache) AddMessage(message gptClient.Message) {
+func (c *UserCache) AddMessage(message Message) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Messages = append(c.Messages, message)
 }
 
-func (c *UserCache) GetMessages() []gptClient.Message {
+func (c *UserCache) GetMessages() []Message {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return append([]gptClient.Message(nil), c.Messages...)
+	return append([]Message(nil), c.Messages...)
 }
 
 type Cache struct {

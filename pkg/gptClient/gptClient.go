@@ -52,15 +52,10 @@ type GptClient struct {
 	conf   GptConfiguration
 }
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
 type GPTRequest struct {
-	Model     string    `json:"model"`
-	Messages  []Message `json:"messages"`
-	MaxTokens int       `json:"max_tokens"`
+	Model     string                 `json:"model"`
+	Messages  []historyCache.Message `json:"messages"`
+	MaxTokens int                    `json:"max_tokens"`
 }
 
 func InitGpt(configuration GptConfiguration) GptClient {
@@ -73,7 +68,7 @@ func InitGpt(configuration GptConfiguration) GptClient {
 
 func (c *GptClient) SendMessage(content string, userID string) (string, error) {
 	logger := botLogger.GetLogger()
-	message := Message{
+	message := historyCache.Message{
 		Role:    "user",
 		Content: content,
 	}
