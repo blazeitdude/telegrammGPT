@@ -20,7 +20,7 @@ func ReadConfig() Configuration {
 	var conf Configuration
 	viper.SetConfigName("startUp")
 	viper.SetConfigType("yml")
-	viper.AddConfigPath("../config")
+	viper.AddConfigPath("../../config")
 	if err := viper.ReadInConfig(); err != nil {
 		var configParseError viper.ConfigParseError
 		var configFileNotFoundError viper.ConfigFileNotFoundError
