@@ -43,7 +43,7 @@ func ReadConfig() Configuration {
 	conf.GptConfig.ApiKey = os.Getenv("GPT_APIKEY")
 
 	if conf.BotConfig.ApiKey == "" || conf.GptConfig.ApiKey == "" {
-		log.Fatal("Fail;ed to read ENV")
+		log.Fatal("Failed to read ENV")
 	}
 
 	if err := viper.Unmarshal(&conf); err != nil {
